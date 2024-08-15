@@ -1,24 +1,26 @@
 ---
-name: Lua-format
+name: Lua-format-workflow
+
 on:
-  pull_request:
-    paths:
-      - "data*/**"
+  workflow_run:
+    workflows: ["Lua-format"]
+    types: [completed]
 
 jobs:
-  lua-formatter:
+  on-success:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.event == 'pull_request' && github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.repository.full_name != github.repository }}
     steps:
       - name: Set up Git
         run: |
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git config --global user.name "GitHub Actions"
-
       - name: Actions checkout
         uses: actions/checkout@v3
         with:
-          repository: ${{ github.event.pull_request.head.repo.full_name }}
-          ref: ${{ github.event.pull_request.head.ref }}
+          fetch-depth: 0
+          repository: ${{ github.event.workflow_run.head_branch }}
+          ref: ${{ github.event.workflow_run.head_sha }}
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: JohnnyMorganz/stylua-action@v3
@@ -27,8 +29,7 @@ jobs:
           version: latest
           args: .
 
-      - name: Run add and commit from local branches
-        if: ${{ github.event.pull_request.head.repo.full_name == github.repository }}
+      - name: Run add and commit
         uses: EndBug/add-and-commit@v9
         with:
           author_name: GitHub Actions
